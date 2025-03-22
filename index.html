@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Song from Playlist</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        .song-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            padding: 30px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+        h1 {
+            color: #333;
+            margin-top: 0;
+            font-size: 24px;
+        }
+        .song-title {
+            font-size: 32px;
+            color: #1db954;
+            margin: 20px 0 10px;
+            word-wrap: break-word;
+        }
+        .artist-name {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 20px;
+            word-wrap: break-word;
+        }
+        .button {
+            background-color: #1db954;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin: 5px;
+        }
+        .button:hover {
+            background-color: #18a449;
+        }
+        .loading {
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="song-card">
+        <h1>Random Song from Your Playlist</h1>
+        
+        <div id="song-display">
+            <p class="loading">Loading your playlist...</p>
+        </div>
+        
+        <button id="randomButton" class="button">Show Another Song</button>
+    </div>
+
+    <script>
+        // UPDATE THIS to match your playlist filename
+        const PLAYLIST_FILE = 'playlist.csv';
+        
+        let playlist = [];
+        const randomButton = document.getElementById('randomButton');
+        const songDisplay = document.getElementById('song-display');
+        
+        // Function to get a random item from an array
+        function getRandomItem(array) {
+            return array[Math.floor(Math.random() * array.length)];
+        }
+
+        // Function to display a song
+        function displaySong(song) {
+            songDisplay.innerHTML = `
+                <p class="song-title">${song.song}</p>
+                <p class="artist-name">by ${song.artist}</p>
+            `;
+        }
+
+        // Function to parse tab or space delimited data
+        function parseTabData(text) {
+            const lines = text.split('\n');
+            if (lines.length < 2) return [];
+            
+            // Try to determine if it's tab-delimited or just space-delimited
+            const firstLine = lines[0];
+            const delimiter = firstLine.includes('\t') ? '\t' : 
+                             (firstLine.match(/\s{2,}/) ? /\s{2,}/ : ',');
+            
+            const headers = firstLine.split(delimiter).map(header => header.trim().toLowerCase());
+            
+            // Find artist and song column indices
+            let artistIndex = headers.indexOf('artist');
+            let songIndex = headers.indexOf('song');
+            
+            // If headers aren't found exactly, try partial matching
+            if (artistIndex === -1) {
+                artistIndex = headers.findIndex(h => h.includes('artist'));
+            }
+            if (songIndex === -1) {
+                songIndex = headers.findIndex(h => h.includes('song'));
+            }
+            
+            // If still not found, assume first two columns
+            if (artistIndex === -1 || songIndex === -1) {
+                artistIndex = 0;
+                songIndex = 1;
+            }
+            
+            const result = [];
+            for (let i = 1; i < lines.length; i++) {
+                if (lines[i].trim() === '') continue;
+                
+                let values;
+                if (delimiter instanceof RegExp) {
+                    values = lines[i].split(delimiter).map(value => value.trim());
+                } else {
+                    values = lines[i].split(delimiter).map(value => value.trim());
+                }
+                
+                if (values.length < 2) continue;
+                
+                result.push({
+                    artist: values[artistIndex] || 'Unknown Artist',
+                    song: values[songIndex] || 'Unknown Song'
+                });
+            }
+            
+            return result;
+        }
+
+        // Load playlist file on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            fetch(PLAYLIST_FILE)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Could not load playlist file. Make sure it\'s named correctly and in the same folder as this HTML file.');
+                    }
+                    return response.text();
+                })
+                .then(fileText => {
+                    playlist = parseTabData(fileText);
+                    
+                    if (playlist.length > 0) {
+                        // Show a random song right away
+                        const randomSong = getRandomItem(playlist);
+                        displaySong(randomSong);
+                    } else {
+                        songDisplay.innerHTML = `<p style="color: red;">No valid songs found in the playlist file.</p>`;
+                    }
+                })
+                .catch(error => {
+                    songDisplay.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+                });
+        });
+
+        // Handle random button click
+        randomButton.addEventListener('click', function() {
+            if (playlist.length === 0) return;
+            
+            const randomSong = getRandomItem(playlist);
+            displaySong(randomSong);
+        });
+    </script>
+</body>
+</html>
